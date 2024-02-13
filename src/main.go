@@ -45,8 +45,8 @@ func main() {
 func initDB(dbURL string) error {
 	var err error
 	db, err = sql.Open("postgres", dbURL)
-	db.SetMaxOpenConns(50)
-	db.SetConnMaxLifetime(10)
+	db.SetMaxOpenConns(10)
+	db.SetConnMaxLifetime(10 * time.Minute)
 	if err != nil {
 		return err
 	}
