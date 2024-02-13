@@ -3,12 +3,15 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gorilla/mux"
+
+	_ "net/http/pprof"
 )
 
 type Erro struct {
@@ -36,7 +39,7 @@ func main() {
 	r.HandleFunc("/clientes/{id}/extrato", ExtratoHandler).Methods("GET")
 
 	http.Handle("/", r)
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("SERVER_PORT")), nil))
 }
 
 func initDB(dbURL string) error {
