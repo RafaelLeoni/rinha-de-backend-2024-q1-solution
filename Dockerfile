@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM golang:1.22
 
 COPY wait-for-it.sh /wait-for-it.sh
 
@@ -11,7 +11,6 @@ RUN go mod download
 RUN go build -o rinha-de-backend-2024-q1 .
 
 RUN chmod +x /wait-for-it.sh
-RUN apk update && apk add bash
 
 EXPOSE 8080
 
