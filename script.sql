@@ -13,56 +13,42 @@ CREATE TABLE transacoes (
     tipo CHAR(1) NOT NULL CHECK (tipo IN ('c', 'd')),
     descricao VARCHAR(10),
     realizada_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    limite INT NOT NULL,
-    saldo INT NOT NULL,
     FOREIGN KEY (id_cliente) REFERENCES clientes(id)
 );
 
 
-CREATE OR REPLACE FUNCTION validar_saldo()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION atualizar_saldo(id_cliente INTEGER, valor INTEGER, tipo CHAR, descricao VARCHAR)
+RETURNS TABLE (saldo INTEGER, limite INTEGER) AS $$
 DECLARE
-    saldo_corrente INTEGER;
-    limite_cliente INTEGER;
     novo_saldo INTEGER;
 BEGIN
     -- Verifiar se cliente existe
-    SELECT saldo, limite INTO saldo_corrente, limite_cliente FROM clientes WHERE id = NEW.id_cliente;
+    SELECT c.saldo, c.limite INTO saldo, limite FROM clientes c WHERE id = id_cliente;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'CLIENTE_NAO_ENCONTRADO';
     END IF;
 
-    IF NEW.tipo = 'c' THEN
-        novo_saldo := saldo_corrente + NEW.valor;
+    IF tipo = 'c' THEN
+        saldo := saldo + valor;
         
-    ELSIF NEW.tipo = 'd' THEN
-        novo_saldo := saldo_corrente - NEW.valor;
+    ELSIF tipo = 'd' THEN
+        saldo := saldo - valor;
 
         -- Verificar se o saldo após a transação de débito é menor que o limite
-        IF novo_saldo < (-1 * limite_cliente) THEN
+        IF saldo < (-1 * limite) THEN
             RAISE EXCEPTION 'LIMITE_EXECEDIDO';
         END IF;
     END IF;
 
-    NEW.limite := limite_cliente;
-    NEW.saldo := novo_saldo;
+    novo_saldo := saldo;
+    INSERT INTO transacoes (id_cliente, valor, tipo, descricao) VALUES (id_cliente, valor, tipo, descricao);
+    UPDATE clientes SET saldo = novo_saldo WHERE id = id_cliente;
+
+    RETURN NEXT;
     
-    RETURN NEW;
+    RETURN;
 END;
 $$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION atualizar_saldo()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE clientes SET saldo = NEW.saldo WHERE id = NEW.id_cliente;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE TRIGGER validar_saldo_trigger BEFORE INSERT ON transacoes FOR EACH ROW EXECUTE FUNCTION validar_saldo();
-CREATE TRIGGER atualizar_saldo_trigger AFTER INSERT ON transacoes FOR EACH ROW EXECUTE FUNCTION atualizar_saldo();
 
 
 INSERT INTO 

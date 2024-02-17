@@ -42,7 +42,7 @@ func TransacaoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Atualizar o saldo
-	novoSaldo, limite, err := incluirTransacao(id, transacao.Valor, transacao.Tipo, transacao.Descricao)
+	saldo, limite, err := incluirTransacao(id, transacao)
 	if err != nil {
 		if err.(*pq.Error).Message == "CLIENTE_NAO_ENCONTRADO" {
 			buildError(w, "Cliente não encontrado", http.StatusNotFound)
@@ -56,7 +56,7 @@ func TransacaoHandler(w http.ResponseWriter, r *http.Request) {
 
 	resposta := Resposta{
 		Limite: limite,
-		Saldo:  novoSaldo,
+		Saldo:  saldo,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -64,10 +64,9 @@ func TransacaoHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resposta)
 }
 
-func incluirTransacao(id string, valor int, tipo, descricao string) (int, int, error) {
-	var saldo int
-	var limite int
-	err := db.QueryRow("INSERT INTO transacoes (id_cliente, valor, tipo, descricao) VALUES ($1, $2, $3, $4) RETURNING saldo, limite", id, valor, tipo, descricao).Scan(&saldo, &limite)
+func incluirTransacao(id string, transacao Transacao) (int, int, error) {
+	var saldo, limite int
+	err := db.QueryRow("SELECT * FROM atualizar_saldo($1, $2, $3, $4)", id, transacao.Valor, transacao.Tipo, transacao.Descricao).Scan(&saldo, &limite)
 	if err != nil {
 		return 0, 0, err
 	}

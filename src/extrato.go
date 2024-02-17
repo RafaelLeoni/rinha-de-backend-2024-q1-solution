@@ -68,21 +68,15 @@ func obterExtrato(id string) (Saldo, []TransacaoExtrato, error) {
 	var saldo Saldo
 	var ultimasTransacoes []TransacaoExtrato
 	for rows.Next() {
-		var total, limite, valor int
-		var tipo, descricao string
-		var realizadaEm time.Time
-		if err := rows.Scan(&total, &limite, &valor, &tipo, &descricao, &realizadaEm); err != nil {
+		var total, limite int
+		var transacao TransacaoExtrato
+		if err := rows.Scan(&total, &limite, &transacao.Valor, &transacao.Tipo, &transacao.Descricao, &transacao.RealizadaEm); err != nil {
 			return newSaldo(total, limite), nil, nil
 		}
 		if saldo.Total == 0 {
 			saldo = newSaldo(total, limite)
 		}
-		ultimasTransacoes = append(ultimasTransacoes, TransacaoExtrato{
-			Valor:       valor,
-			Tipo:        tipo,
-			Descricao:   descricao,
-			RealizadaEm: realizadaEm,
-		})
+		ultimasTransacoes = append(ultimasTransacoes, transacao)
 	}
 	if len(ultimasTransacoes) == 0 {
 		return Saldo{}, nil, sql.ErrNoRows

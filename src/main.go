@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-
-	_ "net/http/pprof"
 )
 
 type Erro struct {
