@@ -43,11 +43,11 @@ func main() {
 func initDB(dbURL string) error {
 	var err error
 	db, err = sql.Open("postgres", dbURL)
-	db.SetMaxOpenConns(10)
-	db.SetConnMaxLifetime(10 * time.Minute)
 	if err != nil {
 		return err
 	}
+	db.SetMaxOpenConns(10)
+	db.SetConnMaxLifetime(10 * time.Minute)
 
 	err = db.Ping()
 	if err != nil {
