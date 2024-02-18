@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type Erro struct {
+type ResponseError struct {
 	Message   string    `json:"erro"`
 	Timestamp time.Time `json:"ocorreu_em"`
 }
@@ -33,8 +33,8 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/clientes/{id}/transacoes", TransacaoHandler).Methods("POST")
-	r.HandleFunc("/clientes/{id}/extrato", ExtratoHandler).Methods("GET")
+	r.HandleFunc("/clientes/{id}/transacoes", TransactionHandler).Methods("POST")
+	r.HandleFunc("/clientes/{id}/extrato", StatementHandler).Methods("GET")
 
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("SERVER_PORT")), nil))
@@ -63,7 +63,7 @@ func buildError(w http.ResponseWriter, msg string, stausCode int) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(stausCode)
-	json.NewEncoder(w).Encode(&Erro{
+	json.NewEncoder(w).Encode(&ResponseError{
 		Message:   msg,
 		Timestamp: time.Now(),
 	})

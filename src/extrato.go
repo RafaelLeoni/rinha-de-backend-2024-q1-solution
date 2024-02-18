@@ -10,29 +10,29 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Saldo struct {
-	Total       int       `json:"total"`
-	DataExtrato time.Time `json:"data_extrato"`
-	Limite      int       `json:"limite"`
+type StatementBalance struct {
+	Total int       `json:"total"`
+	Date  time.Time `json:"data_extrato"`
+	Limit int       `json:"limite"`
 }
 
-type TransacaoExtrato struct {
-	Valor       int       `json:"valor"`
-	Tipo        string    `json:"tipo"`
-	Descricao   string    `json:"descricao"`
-	RealizadaEm time.Time `json:"realizada_em"`
+type StatementTransaction struct {
+	Value       int       `json:"valor"`
+	Type        string    `json:"tipo"`
+	Description string    `json:"descricao"`
+	CreatedAt   time.Time `json:"realizada_em"`
 }
 
-type ExtratoResposta struct {
-	Saldo             Saldo              `json:"saldo"`
-	UltimasTransacoes []TransacaoExtrato `json:"ultimas_transacoes"`
+type StatementResponse struct {
+	Balance      StatementBalance       `json:"saldo"`
+	Transactions []StatementTransaction `json:"ultimas_transacoes"`
 }
 
-func ExtratoHandler(w http.ResponseWriter, r *http.Request) {
+func StatementHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	saldo, ultimasTransacoes, err := obterExtrato(id)
+	balance, transactions, err := getStatement(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			buildError(w, "Extrato não encontrado para o cliente", http.StatusNotFound)
@@ -42,17 +42,17 @@ func ExtratoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resposta := ExtratoResposta{
-		Saldo:             saldo,
-		UltimasTransacoes: ultimasTransacoes,
+	response := StatementResponse{
+		Balance:      balance,
+		Transactions: transactions,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resposta)
+	json.NewEncoder(w).Encode(response)
 }
 
-func obterExtrato(id string) (Saldo, []TransacaoExtrato, error) {
+func getStatement(id string) (StatementBalance, []StatementTransaction, error) {
 	rows, err := db.Query(`
         SELECT c.saldo, c.limite, t.valor, t.tipo, t.descricao, t.realizada_em
         FROM clientes c
@@ -61,33 +61,33 @@ func obterExtrato(id string) (Saldo, []TransacaoExtrato, error) {
         ORDER BY t.realizada_em DESC
         LIMIT 10`, id)
 	if err != nil {
-		return Saldo{}, nil, err
+		return StatementBalance{}, nil, err
 	}
 	defer rows.Close()
 
-	var saldo Saldo
-	var ultimasTransacoes []TransacaoExtrato
+	var balance StatementBalance
+	var transactions []StatementTransaction
 	for rows.Next() {
-		var total, limite int
-		var transacao TransacaoExtrato
-		if err := rows.Scan(&total, &limite, &transacao.Valor, &transacao.Tipo, &transacao.Descricao, &transacao.RealizadaEm); err != nil {
-			return newSaldo(total, limite), nil, nil
+		var total, limit int
+		var transaction StatementTransaction
+		if err := rows.Scan(&total, &limit, &transaction.Value, &transaction.Type, &transaction.Description, &transaction.CreatedAt); err != nil {
+			return newBalance(total, limit), nil, nil
 		}
-		if saldo.Total == 0 {
-			saldo = newSaldo(total, limite)
+		if balance.Total == 0 {
+			balance = newBalance(total, limit)
 		}
-		ultimasTransacoes = append(ultimasTransacoes, transacao)
+		transactions = append(transactions, transaction)
 	}
-	if len(ultimasTransacoes) == 0 {
-		return Saldo{}, nil, sql.ErrNoRows
+	if len(transactions) == 0 {
+		return StatementBalance{}, nil, sql.ErrNoRows
 	}
-	return saldo, ultimasTransacoes, nil
+	return balance, transactions, nil
 }
 
-func newSaldo(total, limite int) Saldo {
-	return Saldo{
-		Total:       total,
-		DataExtrato: time.Now(),
-		Limite:      limite,
+func newBalance(total, limit int) StatementBalance {
+	return StatementBalance{
+		Total: total,
+		Date:  time.Now(),
+		Limit: limit,
 	}
 }

@@ -8,41 +8,41 @@ import (
 	"github.com/lib/pq"
 )
 
-type Transacao struct {
-	Valor     int    `json:"valor"`
-	Tipo      string `json:"tipo"`
-	Descricao string `json:"descricao"`
+type Transaction struct {
+	Value       int    `json:"valor"`
+	Type        string `json:"tipo"`
+	Description string `json:"descricao"`
 }
 
-type Resposta struct {
-	Limite int `json:"limite"`
-	Saldo  int `json:"saldo"`
+type TransactionResponse struct {
+	Limit   int `json:"limite"`
+	Balance int `json:"saldo"`
 }
 
-func TransacaoHandler(w http.ResponseWriter, r *http.Request) {
+func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	var transacao Transacao
-	if err := json.NewDecoder(r.Body).Decode(&transacao); err != nil {
+	var transaction Transaction
+	if err := json.NewDecoder(r.Body).Decode(&transaction); err != nil {
 		buildError(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 	defer r.Body.Close()
 
 	// Validar requisição
-	if transacao.Tipo != "c" && transacao.Tipo != "d" {
+	if transaction.Type != "c" && transaction.Type != "d" {
 		buildError(w, "Tipo de transação inválido", http.StatusUnprocessableEntity)
 		return
 	}
 
-	if transacao.Valor <= 0 || len(transacao.Descricao) < 1 || len(transacao.Descricao) > 10 {
+	if transaction.Value <= 0 || len(transaction.Description) < 1 || len(transaction.Description) > 10 {
 		buildError(w, "Dados da transação inválidos", http.StatusUnprocessableEntity)
 		return
 	}
 
-	// Atualizar o saldo
-	saldo, limite, err := incluirTransacao(id, transacao)
+	// Salvar transação e recuperar saldo atualizado
+	balance, limit, err := saveTransaction(id, transaction)
 	if err != nil {
 		if err.(*pq.Error).Message == "CLIENTE_NAO_ENCONTRADO" {
 			buildError(w, "Cliente não encontrado", http.StatusNotFound)
@@ -54,21 +54,21 @@ func TransacaoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resposta := Resposta{
-		Limite: limite,
-		Saldo:  saldo,
+	response := TransactionResponse{
+		Limit:   limit,
+		Balance: balance,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resposta)
+	json.NewEncoder(w).Encode(response)
 }
 
-func incluirTransacao(id string, transacao Transacao) (int, int, error) {
-	var saldo, limite int
-	err := db.QueryRow("SELECT * FROM atualizar_saldo($1, $2, $3, $4)", id, transacao.Valor, transacao.Tipo, transacao.Descricao).Scan(&saldo, &limite)
+func saveTransaction(id string, transaction Transaction) (int, int, error) {
+	var balance, limit int
+	err := db.QueryRow("SELECT * FROM atualizar_saldo($1, $2, $3, $4)", id, transaction.Value, transaction.Type, transaction.Description).Scan(&balance, &limit)
 	if err != nil {
 		return 0, 0, err
 	}
-	return saldo, limite, nil
+	return balance, limit, nil
 }
