@@ -14,8 +14,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.25"
-          memory: "100MB"
+          cpus: "0.15"
+          memory: "75MB"
 
   api02:
     <<: *api
@@ -40,7 +40,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: "230MB"
+          memory: "225MB"
 
   db:
     image: postgres:latest
@@ -56,8 +56,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: "120MB"
+          cpus: "0.7"
+          memory: "175MB"
 
 networks:
   default:
