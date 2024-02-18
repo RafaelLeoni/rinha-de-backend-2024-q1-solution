@@ -5,7 +5,7 @@ entryPoints:
   web:
     address: :80
 
-accessLog: {}
+accessLog: false
 
 providers:
   docker:
